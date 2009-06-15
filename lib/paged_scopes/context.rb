@@ -11,7 +11,7 @@ module PagedScopes
     
     module ClassMethods
       def find_with_context(*args)
-        found_scope, found_options = scope(:find) || {}, args.dup.extract_options!.dup
+        found_scope, found_options = (scope(:find) || {}).dup, args.dup.extract_options!.dup
         returning find_without_context(*args) do |results|
           [ results ].flatten.compact.each do |result|
             result.instance_variable_set "@found_scope", found_scope.dup
