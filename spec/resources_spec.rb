@@ -1,3 +1,5 @@
+require 'spec_helper'
+
 describe "Resources" do
   before(:each) do
     ActionController::Routing::Routes.clear!

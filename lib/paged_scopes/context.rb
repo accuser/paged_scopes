@@ -13,7 +13,7 @@ module PagedScopes
       def find_with_context(*args)
         returning find_without_context(*args) do |results|
           found_scope, found_options = scope(:find), args.extract_options!
-          [ results ].flatten.each do |result|
+          [ results ].flatten.compact.each do |result|
             result.instance_variable_set "@found_scope", found_scope
             result.instance_variable_set "@found_options", found_options
           end

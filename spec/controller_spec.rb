@@ -5,8 +5,8 @@ describe "Controller" do
     it "should add a protected get_page_for callback as a before filter when get_page_for is called" do
       in_controller_class do
         get_page_for :articles
-        before_filters.should include("get_page_for_articles")
-        protected_instance_methods.should include("get_page_for_articles")
+        before_filters.map(&:to_s).should include("get_page_for_articles")
+        protected_instance_methods.map(&:to_s).should include("get_page_for_articles")
       end
     end
   end
