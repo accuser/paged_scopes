@@ -64,10 +64,8 @@ module PagedScopes
 
     def after(object)
       after_index = index_of(object) + 1
-      find_scope = scope(:find) || {}
-      if find_scope[:limit]
-        offset = (find_scope[:offset] || 0).to_i
-        after_index >= find_scope[:limit] ? nil : first(:offset => after_index + offset)
+      if limit = scope(:find, :limit)
+        after_index >= limit ? nil : first(:offset => after_index + (scope(:find, :offset) || 0))
       else
         first(:offset => after_index)
       end
@@ -75,10 +73,8 @@ module PagedScopes
 
     def before(object)
       before_index = index_of(object) - 1
-      find_scope = scope(:find) || {}
-      if find_scope[:limit]
-        offset = find_scope[:offset].to_i
-        before_index < 0 ? nil : first(:offset => before_index + offset)
+      if scope(:find, :limit)
+        before_index < 0 ? nil : first(:offset => before_index + (scope(:find, :offset) || 0))
       else
         before_index < 0 ? nil : first(:offset => before_index)
       end
