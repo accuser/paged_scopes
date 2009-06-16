@@ -3,6 +3,7 @@ require 'spec_helper'
 describe "Pages" do
   in_contexts do
     before(:each) do
+      @pages = @articles.pages
       @per_page = 3
       @articles.stub!(:per_page).and_return(@per_page)
       @articles.stub!(:page_name).and_return("Page")
@@ -93,6 +94,7 @@ end
 describe "Page instance" do
   in_contexts do
     before(:each) do
+      @pages = @articles.pages
       @per_page = 3
       @articles.stub!(:per_page).and_return(@per_page)
     end

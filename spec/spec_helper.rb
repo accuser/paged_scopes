@@ -115,7 +115,6 @@ module Contexts
           before(:each) do
             @articles = eval("#{base}#{scope}")
             @articles.all.should_not be_empty
-            @pages = @articles.pages
           end
           instance_eval(&block)
         end
