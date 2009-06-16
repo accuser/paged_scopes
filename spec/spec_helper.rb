@@ -47,22 +47,10 @@ end
   end
 end
 
-module ControllerHelpers
-  def in_controller_class(&block)
-    Class.new(ActionController::Base) do
+module InstanceHelper
+  def in_instance(instance, &block)
+    instance.instance_eval do
       extend Spec::Matchers
-      instance_eval(&block)
-    end
-  end
-
-  def in_controller_instance_with_paged(collection, &block)
-    controller = Class.new(ActionController::Base) do
-      get_page_for collection
-    end.new
-    controller.copy_instance_variables_from(self)
-    controller.instance_eval do    
-      extend Spec::Matchers
-      stub!(:params).and_return({})
       instance_eval(&block)
     end
   end
@@ -126,6 +114,6 @@ end
 Spec::Runner.configure do |config|
   config.extend Contexts
   config.include RoutingHelpers
-  config.include ControllerHelpers
+  config.include InstanceHelper
 end
 

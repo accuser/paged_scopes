@@ -1,40 +1,52 @@
 require 'spec_helper'
 
 describe "Controller" do
+  
   context "class" do
+    before(:each) do
+      @class = Class.new(ActionController::Base)
+    end
+    
     it "should add a protected get_page_for callback as a before filter when get_page_for is called" do
-      in_controller_class do
-        get_page_for :articles
-        before_filters.map(&:to_s).should include("get_page_for_articles")
-        protected_instance_methods.map(&:to_s).should include("get_page_for_articles")
-      end
+      @class.get_page_for :articles
+      @class.before_filters.map(&:to_s).should include("get_page_for_articles")
+      @class.protected_instance_methods.map(&:to_s).should include("get_page_for_articles")
     end
   end
-  
-  describe "instance" do
+    
+  context "instance" do
+    before(:each) do
+      @controller = Class.new(ActionController::Base) do
+        get_page_for :articles
+      end.new
+    end
+
     it "should raise an error if no collection is set" do
-      in_controller_instance_with_paged(:articles) do
+      in_instance @controller do
         lambda { get_page_for_articles }.should raise_error(RuntimeError)
       end      
     end
-    
+
     context "when the collection is set" do
-      before(:all) do
-        @articles = User.first.articles
-        @articles.per_page = 3
-      end
-    
-      it "should get the page from a page id in the params" do 
-        in_controller_instance_with_paged(:articles) do
-          stub!(:params).and_return({ :page_id => @articles.pages.last.id })
-          get_page_for_articles
-          @page.articles.should include(@articles.last)
+      before(:each) do
+        in_instance @controller do
+          @articles = User.first.articles
+          @articles.per_page = 3
+          stub!(:params).and_return({})
         end
       end
     
+      it "should get the page from a page id in the params" do 
+        in_instance @controller do
+          stub!(:params).and_return(:page_id => @articles.pages.last.id)
+          get_page_for_articles
+          @page.should == @articles.pages.last
+        end
+      end
+  
       it "should otherwise get the page from the current object if no page id is present in the params" do 
-        @article = @articles.last
-        in_controller_instance_with_paged(:articles) do
+        in_instance @controller do
+          @article = @articles.last
           get_page_for_articles
           @page.should == @articles.pages.find_by_article(@article)
           @page.articles.should include(@article)
@@ -42,18 +54,64 @@ describe "Controller" do
       end
           
       it "should get the first page if the current object is a new record" do
-        @article = @articles.new
-        in_controller_instance_with_paged(:articles) do
+        in_instance @controller do
+          @article = @articles.new
           get_page_for_articles
           @page.should == @articles.pages.first
         end
       end
           
       it "should otherwise get the first page" do
-        in_controller_instance_with_paged(:articles) do
+        in_instance @controller do
           get_page_for_articles
           @page.should == @articles.pages.first
         end
+      end
+    end
+  end
+  
+  context "instance when :per_page is specified in the call to #get_page_for" do
+    it "should set per_page on the collection" do
+      @controller = Class.new(ActionController::Base) do
+        get_page_for :articles, :per_page => 3
+      end.new
+      in_instance @controller do
+        @articles = User.first.articles
+        @articles.per_page = nil
+        stub!(:params).and_return({})
+        get_page_for_articles
+        @articles.per_page.should == 3
+        @articles.pages.per_page.should == 3
+      end
+    end
+  end
+  
+  context "instance when :name is specified in the call to #get_page_for" do
+    it "should set page_name on the collection" do
+      @controller = Class.new(ActionController::Base) do
+        get_page_for :articles, :per_page => 3, :name => "Group"
+      end.new
+      in_instance @controller do
+        @articles = User.first.articles
+        stub!(:params).and_return({})
+        get_page_for_articles
+        @articles.page_name.should == "Group"
+        @articles.pages.name.should == "Group"
+      end
+    end
+  end
+    
+  context "instance when block is specified in the call to #get_page_for" do
+    it "should set page's pagination path to the block" do
+      paginator_path = lambda { |page| [ page, Article.new ] }
+      @controller = Class.new(ActionController::Base) do
+        get_page_for :articles, :per_page => 3, &paginator_path
+      end.new
+      in_instance @controller do
+        @articles = User.first.articles
+        stub!(:params).and_return({})
+        get_page_for_articles
+        @page.paginator.path.should == paginator_path
       end
     end
   end

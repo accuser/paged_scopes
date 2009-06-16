@@ -11,7 +11,7 @@ module PagedScopes
     end
     
     def path
-      @path || raise(ArgumentError, "No path proc supplied.")
+      @path || raise(RuntimeError, "No path proc supplied.")
     end
 
     def previous

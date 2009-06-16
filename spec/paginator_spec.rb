@@ -12,7 +12,7 @@ describe "Paginator" do
   end
   
   it "should raise an error if the paginator path is not set" do
-    lambda { @pages.first.paginator.next }.should raise_error
+    lambda { @pages.first.paginator.next }.should raise_error(RuntimeError)
   end
   
   context "for the first page" do

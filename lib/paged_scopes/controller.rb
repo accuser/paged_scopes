@@ -1,14 +1,15 @@
 module PagedScopes
   module Controller
-    def get_page_for(collection_name, options = {})
+    def get_page_for(collection_name, options = {}, &block)
       callback_method = "get_page_for_#{collection_name}"
       define_method callback_method do
         collection = instance_variable_get("@#{collection_name.to_s.pluralize}")
         raise RuntimeError, "no @#{collection_name.to_s.pluralize} collection was set" unless collection
         object = instance_variable_get("@#{collection_name.to_s.singularize}")
         collection.per_page = options[:per_page] if options[:per_page]
-        collection.name = options[:name] if options[:name]
+        collection.page_name = options[:name] if options[:name]
         page = collection.pages.from_params(params) || (object && collection.pages.find_by_object(object)) || collection.pages.first
+        page.paginator.set_path(&block) if block
         instance_variable_set("@#{collection.pages.name.underscore}", page)
       end
       protected callback_method
