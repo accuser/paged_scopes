@@ -47,10 +47,17 @@ end
   end
 end
 
-module InstanceHelper
+module ControllerHelpers
   def in_instance(instance, &block)
     instance.instance_eval do
       extend Spec::Matchers
+      instance_eval(&block)
+    end
+  end
+  
+  def in_controller(controller, &block)
+    in_instance controller do
+      stub!(:params).and_return({})
       instance_eval(&block)
     end
   end
@@ -114,6 +121,6 @@ end
 Spec::Runner.configure do |config|
   config.extend Contexts
   config.include RoutingHelpers
-  config.include InstanceHelper
+  config.include ControllerHelpers
 end
 
