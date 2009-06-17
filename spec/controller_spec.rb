@@ -6,12 +6,25 @@ describe "Controller" do
     before(:each) do
       @class = Class.new(ActionController::Base)
     end
+
+    it "should raise 404 on PagedScopes::PageNotFound" do
+      @class.rescue_responses['PagedScopes::PageNotFound'].should == :not_found
+    end
     
     it "should add a protected get_page_for callback as a before filter when get_page_for is called" do
       @class.get_page_for :articles
       @class.before_filters.map(&:to_s).should include("get_page_for_articles")
       @class.protected_instance_methods.map(&:to_s).should include("get_page_for_articles")
     end
+    
+    it "should pass filter options except for :per_page, :name and :path on to the before filter" do
+      @options = { :per_page => 3, :name => "Group", :path => :page_articles_path, :only => [ :index, :show ], :if => :test }
+      @class.get_page_for :articles, @options
+      @filter = @class.filter_chain.detect { |filter| filter.method.to_s == "get_page_for_articles" }
+      @filter.options.keys.should_not include(:per_page, :name, :path)
+      @filter.options.keys.should include(:only, :if)
+    end
+    
   end
     
   context "instance" do
@@ -35,11 +48,18 @@ describe "Controller" do
         end
       end
     
-      it "should get the page from a page id in the params" do 
+      it "should get the page from a page id in the params" do
         in_controller @controller do
           stub!(:params).and_return(:page_id => @articles.pages.last.id)
           get_page_for_articles
           @page.should == @articles.pages.last
+        end
+      end
+
+      it "should raise PageNotFound if the page id in the params is not in range" do
+        in_controller @controller do
+          stub!(:params).and_return(:page_id => @articles.pages.last.id + 1)
+          lambda { get_page_for_articles }.should raise_error(PagedScopes::PageNotFound)
         end
       end
   

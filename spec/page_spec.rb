@@ -31,10 +31,34 @@ describe "Pages" do
       @pages.count.should == (@articles.all.length - 1)/@per_page + 1
     end
     
+    it "should cache the page count" do
+      @articles.should_receive(:count).and_return(1)
+      2.times { @pages.count }
+    end
+
+    it "should clear the count cache when reloaded" do
+      @articles.should_receive(:count).twice.and_return(1)
+      @pages.count
+      @pages.reload!
+      @pages.count
+    end
+    
     it "should find pages with valid numbers" do
       (1..@pages.count).each do |number|
         lambda { @pages.find(number) }.should_not raise_error
       end
+    end
+    
+    it "should cache the results of find" do
+      @pages.should_receive(:new).once
+      2.times { @pages.find(1) }
+    end
+    
+    it "should clear the find cache when reloaded" do
+      @pages.should_receive(:new).twice
+      @pages.find(1)
+      @pages.reload!
+      @pages.find(1)
     end
         
     it "should raise an error containing the nearest substitute page for invalid page numbers" do
@@ -85,8 +109,38 @@ describe "Pages" do
     end
         
     it "should find a page from a params hash with a pages name as an id in the key" do
-      @pages.stub!(:name).and_return("Group")
-      @pages.from_params(:group_id => "1").should == @pages.first
+      @pages.stub!(:name).and_return("Page")
+      @pages.from_params!(:page_id => "1").should == @pages.first
+    end
+
+    it "should find a nil page from a params hash without a pages name as an id in the key" do
+      @pages.stub!(:name).and_return("Page")
+      @pages.from_params!({}).should be_nil
+    end
+
+    it "should raise an error from a params hash containing an out-of-range page id in the key" do
+      @pages.stub!(:name).and_return("Page")
+      lambda { @pages.from_params!(:page_id => @pages.count + 1) }.should raise_error(PagedScopes::PageNotFound)
+    end
+  end
+  
+  context "for an empty collection" do
+    before(:each) do
+      @articles = Article.scoped(:conditions => { :title => "Supercalifragilisticexpialidocious" })
+      @articles.all.should be_empty
+      @articles.per_page = 3
+    end
+    
+    it "should have one page" do
+      @articles.pages.count.should == 1
+    end
+    
+    it "should have a page numbered one" do
+      @articles.pages.first.number.should == 1
+    end
+    
+    it "should have an empty page" do
+      @articles.pages.first.articles.all.should be_empty
     end
   end
 end
@@ -113,6 +167,17 @@ describe "Page instance" do
     
     it "should have the page number as id" do
       @pages.map(&:id).should == @pages.map(&:number)
+    end
+    
+    it "should clear the page class cache when reloaded" do
+      @pages.should_receive(:reload!)
+      @pages.first.reload!
+    end
+    
+    it "should be found again by the page class when reloaded" do
+      @page = @pages.first
+      @pages.should_receive(:find).with(@page.number)
+      @page.reload!
     end
     
     it "should know whether it's first" do

@@ -48,13 +48,8 @@ module PagedScopes
       end
       
       def from_params!(params)
-        find(params[name.underscore.foreign_key.to_sym])
-      end
-      
-      def from_params(params)
-        from_params!(params)
-      rescue PageNotFound
-        nil
+        number = params[name.underscore.foreign_key.to_sym]
+        number ? find(number) : nil
       end
 
       def count
@@ -67,7 +62,7 @@ module PagedScopes
         else
           proxy.count("#{proxy.table_name}.#{proxy.primary_key}", :distinct => true)
         end
-        (collection_count - 1)/per_page + 1
+        [ (collection_count - 1)/per_page + 1, 1].max
       end
       
       memoize :count
@@ -89,7 +84,12 @@ module PagedScopes
       end
       
       def closest_to(number)
-        find([ [ 1, number ].max, count ].min)
+        closest_number = [ [ 1, number ].max, count ].min
+        closest_number > 0 ? find(closest_number) : nil ## TODO this is unneeded now!
+      end
+      
+      def reload!
+        unmemoize_all
       end
       
       private
@@ -108,11 +108,17 @@ module PagedScopes
     private :proxy, :proxy_options, :proxy_scoped?
 
     def initialize(number)
-      unless number > 0 && number <= self.class.count
+      unless number > 0 && number <= page_count
         raise PageNotFound.new("couldn't find page number #{number}", self.class.closest_to(number))
       end
       @number = number
       @paginator = PagedScopes::Paginator.new(self)
+    end
+    
+    def reload!
+      self.class.reload!
+      self.class.find(number)
+      unmemoize_all
     end
     
     def page_count

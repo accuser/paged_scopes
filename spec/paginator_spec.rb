@@ -74,6 +74,13 @@ describe "Paginator" do
       lambda { @pages.first.paginator.window({}) }.should raise_error(ArgumentError)
     end
     
+    it "should concatenate all the block return values into a string" do
+      page = @pages.find(6)
+      page.paginator.set_path { |page| }
+      links = (1..5).map { |n| "<li><a href='/path/to/page/#{n}'>1</a></li>" }
+      links.join("\n").should == page.paginator.window(:size => 2) { |page, path| links.shift }
+    end
+    
     it "should call the block with the page and the path for each page in a window surrounding the page" do
       [ [ 6, 6-@size..6+@size ], [ 2, 1..2+@size ], [ 1, 1..1+@size ], [ @page_count-1, @page_count-1-@size..@page_count ], [ @page_count, @page_count-@size..@page_count ] ].each do |number, range|
         page = @pages.find(number)

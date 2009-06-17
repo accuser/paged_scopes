@@ -23,25 +23,27 @@ module PagedScopes
     end
 
     def window(options)
+      results = []
       size = options[:size]
       extras = [ options[:extras] ].flatten.compact
       raise ArgumentError, "No window block supplied." unless block_given?
       return if @page.page_count < 2
       if @page.number - size > 1
-        yield :first, @path.call(@page.class.first) if extras.include? :first
+        results << yield(:first, @path.call(@page.class.first)) if extras.include? :first
         if extras.include?(:previous) && offset_page = @page.offset(-2 * size - 1)
-          yield :previous, @path.call(offset_page)
+          results << yield(:previous, @path.call(offset_page))
         end
       end
       (-size..size).map { |offset| @page.offset(offset) }.compact.each do |page|
-        yield page, @path.call(page)
+        results << yield( page, @path.call(page))
       end
       if @page.number + size < @page.page_count
         if extras.include?(:next) && offset_page = @page.offset(2 * size + 1)
-          yield :next, @path.call(offset_page)
+          results << yield(:next, @path.call(offset_page))
         end
-        yield :last, @path.call(@page.class.last) if extras.include? :last
+        results << yield(:last, @path.call(@page.class.last)) if extras.include? :last
       end
+      results.join("\n")
     end
   end
 end

@@ -8,16 +8,17 @@ module PagedScopes
         object = instance_variable_get("@#{collection_name.to_s.singularize}")
         collection.per_page = options[:per_page] if options[:per_page]
         collection.page_name = options[:name] if options[:name]
-        page = collection.pages.from_params(params) || (object && collection.pages.find_by_object(object)) || collection.pages.first
+        page = collection.pages.from_params!(params) || (object && collection.pages.find_by_object(object)) || collection.pages.first
         page.paginator.set_path { |pg| send(options[:path], pg) } if options[:path]
         instance_variable_set("@#{collection.pages.name.underscore}", page)
       end
       protected callback_method
-      before_filter callback_method
+      before_filter callback_method, options.except(:per_page, :name, :path)
     end
   end
 end
 
 if defined? ActionController::Base
   ActionController::Base.extend PagedScopes::Controller
+  ActionController::Base.rescue_responses.update('PagedScopes::PageNotFound' => :not_found)
 end
