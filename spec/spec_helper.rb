@@ -56,6 +56,7 @@ module ControllerHelpers
   end
   
   def in_controller(controller, &block)
+    controller.copy_instance_variables_from(self)
     in_instance controller do
       stub!(:params).and_return({})
       instance_eval(&block)
