@@ -18,8 +18,13 @@ ActiveRecord::Schema.define do
   create_table "articles", :force => true do |t|
     t.column "user_id",  :integer
     t.column "title", :text
+    t.column "published_at", :datetime
   end
   create_table "comments", :force => true do |t|
+    t.column "article_id", :integer
+    t.column "user_id", :integer
+  end
+  create_table "contributions", :force => true do |t|
     t.column "article_id", :integer
     t.column "user_id", :integer
   end
@@ -27,24 +32,48 @@ end
 
 class ::User < ActiveRecord::Base
   has_many :articles
-  has_many :comments
-  has_many :commented_articles, :through => :comments, :source => :article
+  has_many :recent_articles, :order => "published_at DESC", :conditions => [ "published_at IS NOT :nil", { :nil => nil } ], :class_name => "Article"
+  has_many :published_articles, :conditions => [ "published_at IS NOT :nil", { :nil => nil } ], :class_name => "Article"
+  has_many :contributions
+  has_many :shared_articles, :through => :contributions, :source => :article
 end
 class ::Article < ActiveRecord::Base
   belongs_to :user
   has_many :comments
+  named_scope :untitled, :conditions => { :title => nil }
+  named_scope :including_comments, :include => :comments
+  named_scope :with_user, :joins => 'INNER JOIN users ON users.id = articles.user_id'
+  named_scope :with_named_user, :joins => 'INNER JOIN users ON users.id = articles.user_id', :conditions => [ 'users.name IS NOT :nil', { :nil => nil } ]
+  named_scope :ordered_by_user_name, :joins => 'INNER JOIN users ON users.id = articles.user_id', :conditions => [ 'users.name IS NOT :nil', { :nil => nil } ], :order => 'users.name'
+  named_scope :with_comments, :joins => 'INNER JOIN comments AS article_comments ON article_comments.article_id = articles.id', :group => 'articles.id'
+  named_scope :first_three_with_comments, :joins => 'INNER JOIN comments AS article_comments ON article_comments.article_id = articles.id', :group => 'articles.id', :limit => 3
+  named_scope :with_multiple_comments, :include => :comments, :joins => 'INNER JOIN (SELECT count(id) AS count, article_id FROM comments GROUP BY article_id) article_comments ON article_comments.article_id = articles.id', :conditions => 'article_comments.count > 1'
+  named_scope :first_three, :limit => 3
+  named_scope :two_through_four, :limit => 3, :offset => 1
+  named_scope :descending_id, :order => 'articles.id DESC'
 end
 class ::Comment < ActiveRecord::Base
+  belongs_to :article
+end
+class ::Contribution < ActiveRecord::Base
   belongs_to :article
   belongs_to :user
 end
 
-[ "first user", nil, "last user" ].each { |name| User.create(:name => name) }
-7.times do
-  User.all.each do |user|
-    user.articles.create.comments << User.first.comments.new
-    user.articles.create(:title => "%03d title" % Article.count).comments << User.first.comments.new << User.last.comments.new
+User.create(:name => "user #1")
+User.create(:name => nil)
+User.create(:name => "user #3")
+9.times do |n|
+  shared_article = User.first.articles.create
+  User.all.each_with_index do |user, i|
+    user.articles.create
+    user.articles.create(:title => "Article #%03d" % Article.count)
+    published_article = user.articles.create(:title => "Article #%03d" % Article.count, :published_at => n.weeks.ago)
+    n.times { published_article.comments << Comment.new }
+    user.articles.create(:published_at => n.weeks.ago)
+    user.shared_articles << shared_article unless user == User.first
   end
+  n.times { shared_article.comments << Comment.new }
 end
 
 module ControllerHelpers
@@ -92,25 +121,32 @@ end
 
 module Contexts
   def in_contexts(&block)
-    [ [ "a scoped ActiveRecord class",      "Article.scoped({})"            ],
-      [ "a has_many association",           "User.last.articles"            ], # not tested for habtm!
-      [ "a has_many, :through association", "User.first.commented_articles" ] ].each do |base_type, base|
-      [ [ "",                                         ""                                          ],
-        [ "scoped with :conditions",                  ".scoped(:conditions => { :title => nil })" ],
-        [ "scoped with :include",                     ".scoped(:include => :comments)"            ],
-        [ "scoped with :joins",                       ".scoped(:joins => 'INNER JOIN users ON users.id = articles.user_id')" ],
-        [ "scoped with :joins & :conditions",         ".scoped(:joins => 'INNER JOIN users ON users.id = articles.user_id', :conditions => [ 'users.name IS NOT :nil', { :nil => nil } ])" ],
-        [ "scoped with :joins, :conditions & :order", ".scoped(:joins => 'INNER JOIN users ON users.id = articles.user_id', :conditions => [ 'users.name IS NOT :nil', { :nil => nil } ], :order => 'users.name')" ],
-        [ "scoped with :joins & :group",              ".scoped(:joins => 'INNER JOIN comments AS article_comments ON article_comments.article_id = articles.id', :group => 'articles.id')" ],
-        [ "scoped with :joins, :group & :limit",      ".scoped(:joins => 'INNER JOIN comments AS article_comments ON article_comments.article_id = articles.id', :group => 'articles.id', :limit => 4)" ],
-        [ "scoped with :includes, :joins & subquery", ".scoped(:include => :comments, :joins => 'INNER JOIN (SELECT count(id) AS count, article_id FROM comments GROUP BY article_id) article_comments ON article_comments.article_id = articles.id', :conditions => 'article_comments.count > 1')"],
-        [ "scoped with :limit",                       ".scoped(:limit => 5)"                      ],
-        [ "scoped with :limit & :offset",             ".scoped(:limit => 5, :offset => 7)"        ],
-        [ "scoped with :order",                       ".scoped(:order => 'articles.id DESC')"     ] ].each do |scope_type, scope|
+    [
+      [ "a scoped ActiveRecord class",        "Article.scoped({})"           ],
+      [ "a has_many association",             "User.last.articles"           ],
+      [ "a conditioned has_many association", "User.last.published_articles" ],
+      [ "an ordered has_many association",    "User.last.recent_articles"    ],
+      [ "a has_many, :through association",   "User.last.shared_articles"    ] # not tested for habtm!
+    ].each do |base_type, base|
+      [ 
+        [ "",                                         "" ],
+        [ "scoped with :conditions",                  ".untitled" ],
+        [ "scoped with :include",                     ".including_comments" ],
+        [ "scoped with :joins",                       ".with_user" ],
+        [ "scoped with :joins & :conditions",         ".with_named_user" ],
+        [ "scoped with :joins, :conditions & :order", ".ordered_by_user_name" ],
+        [ "scoped with :joins & :group",              ".with_comments" ],
+        [ "scoped with :joins, :group & :limit",      ".first_three_with_comments" ],
+        [ "scoped with :includes, :joins & subquery", ".with_multiple_comments" ],
+        [ "scoped with :limit",                       ".first_three" ],
+        [ "scoped with :limit & :offset",             ".two_through_four" ],
+        [ "scoped with :order",                       ".descending_id" ]
+      ].each do |scope_type, scope|
         context "for #{base_type} #{scope_type}" do
           before(:each) do
             @articles = eval("#{base}#{scope}")
-            @articles.all.should_not be_empty
+            @articles.all.should_not be_empty # sanity check: make sure our collection actually has some elements!
+            @articles.all.should == @articles.all.uniq # don't want duplicate items in our test collection
           end
           instance_eval(&block)
         end

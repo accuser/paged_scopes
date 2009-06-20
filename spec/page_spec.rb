@@ -4,7 +4,7 @@ describe "Pages" do
   in_contexts do
     before(:each) do
       @pages = @articles.pages
-      @per_page = 3
+      @per_page = 2
       @articles.stub!(:per_page).and_return(@per_page)
       @articles.stub!(:page_name).and_return("Page")
     end
@@ -128,7 +128,7 @@ describe "Pages" do
     before(:each) do
       @articles = Article.scoped(:conditions => { :title => "Supercalifragilisticexpialidocious" })
       @articles.all.should be_empty
-      @articles.per_page = 3
+      @articles.per_page = 2
     end
     
     it "should have one page" do
@@ -149,7 +149,7 @@ describe "Page instance" do
   in_contexts do
     before(:each) do
       @pages = @articles.pages
-      @per_page = 3
+      @per_page = 2
       @articles.stub!(:per_page).and_return(@per_page)
     end
     

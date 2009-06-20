@@ -40,16 +40,6 @@ module PagedScopes
         [ string, hash, n + 1 ]
       end
       order_conditions.pop
-
-      # order_conditions = order_attributes.reverse.inject([]) do |conditions, order_attribute|
-      #   if conditions.empty?
-      #     conditions = [ "#{order_attribute} #{order_operators[order_attribute]} ?", object_order_attributes[order_attribute] ]
-      #   else
-      #     conditions[0] = "#{order_attribute} #{order_operators[order_attribute]} ? OR (#{order_attribute} = ? AND (#{conditions[0]}))"
-      #     conditions.insert 1, object_order_attributes[order_attribute]
-      #     conditions.insert 1, object_order_attributes[order_attribute]
-      #   end
-      # end
       
       count_options = { :conditions => order_conditions, :distinct => true }
       count_options.merge!(:offset => 0) if find_scope[:offset]
