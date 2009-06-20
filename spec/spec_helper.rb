@@ -41,7 +41,7 @@ class ::Article < ActiveRecord::Base
   belongs_to :user
   has_many :comments
   named_scope :untitled, :conditions => { :title => nil }
-  named_scope :including_comments, :include => :comments
+  named_scope :including_user, :include => :user
   named_scope :with_user, :joins => 'INNER JOIN users ON users.id = articles.user_id'
   named_scope :with_named_user, :joins => 'INNER JOIN users ON users.id = articles.user_id', :conditions => [ 'users.name IS NOT :nil', { :nil => nil } ]
   named_scope :ordered_by_user_name, :joins => 'INNER JOIN users ON users.id = articles.user_id', :conditions => [ 'users.name IS NOT :nil', { :nil => nil } ], :order => 'users.name'
@@ -131,7 +131,7 @@ module Contexts
       [ 
         [ "",                                         "" ],
         [ "scoped with :conditions",                  ".untitled" ],
-        [ "scoped with :include",                     ".including_comments" ],
+        [ "scoped with :include",                     ".including_user" ],
         [ "scoped with :joins",                       ".with_user" ],
         [ "scoped with :joins & :conditions",         ".with_named_user" ],
         [ "scoped with :joins, :conditions & :order", ".ordered_by_user_name" ],

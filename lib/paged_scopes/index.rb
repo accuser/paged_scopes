@@ -15,7 +15,7 @@ module PagedScopes
         order_attributes << primary_key_attribute
       end
       
-      attribute_selects = returning([]) do |selects|
+      attribute_selects = returning([ "#{table_name}.*" ]) do |selects|
         order_attributes.each_with_index do |order_attribute, n|
           selects << "#{order_attribute} AS order_attribute_#{n}"
         end
