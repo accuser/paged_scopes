@@ -138,7 +138,7 @@ module PagedScopes
     end
     
     def ==(other)
-      number == other.number
+      other.is_a?(self.class) && number == other.number
     end
     
     def full?

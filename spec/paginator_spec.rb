@@ -70,6 +70,10 @@ describe "Paginator" do
   end
   
   describe "window generator" do
+    before(:each) do
+      @args = []
+    end
+    
     it "should raise an error if no block is provided" do
       lambda { @pages.first.paginator.window({}) }.should raise_error(ArgumentError)
     end
@@ -89,11 +93,32 @@ describe "Paginator" do
         range.map { |nearby_number| @pages.find(nearby_number) }.each do |nearby_page|
           expected_args << [ nearby_page, @path.call(nearby_page) ]
         end
-        actual_args = []
         page.paginator.window(:size => @size) do |*args|
-          actual_args << args
+          expected_args.shift.should == args
         end
-        actual_args.should == expected_args
+        expected_args.should be_empty
+      end
+    end
+    
+    [ [ :previous, 2, 1 ], [ :next, 1, 2 ] ].each do |extra, number, new_number|
+      it "should call the block with #{extra.inspect} and the path for the #{extra} page if #{extra.inspect} is specified as an extra" do
+        page = @pages.find(number)
+        page.paginator.set_path(&@path)
+        page.paginator.window(:size => @size, :extras => [ extra ]) do |*args|
+          @args << args
+        end
+        @args.should include([ extra, @path.call(@pages.find(new_number)) ])
+      end
+    end
+
+    [ [ :previous, "1" ], [ :next, "@page_count" ] ].each do |extra, number|
+      it "should call the block with #{extra.inspect} and a nil path if #{extra.inspect} is specified as an extra but there is no #{extra} page" do
+        page = @pages.find(eval(number))
+        page.paginator.set_path(&@path)
+        page.paginator.window(:size => @size, :extras => [ extra ]) do |*args|
+          @args << args
+        end
+        @args.should include([ extra, nil ])
       end
     end
     
@@ -101,43 +126,21 @@ describe "Paginator" do
       it "should call the block with #{extra.inspect} and the path for the #{extra} page if #{extra.inspect} is specified as an extra" do
         page = @pages.find(6)
         page.paginator.set_path(&@path)
-        page.paginator.window(:size => @size, :extras => [ extra ]) do |page, path|
-          @received = true if extra == page && path == @path.call(@pages.send(extra))
+        page.paginator.window(:size => @size, :extras => [ extra ]) do |*args|
+          @args << args
         end
-        @received.should be_true
+        @args.should include([ extra, @path.call(@pages.send(extra)) ])
       end
     end
 
-    [ [ :first, "1+@size" ], [ :last, "@page_count-@size" ] ].each do |extra, number|
-      it "should not call the block with #{extra.inspect} if #{extra.inspect} is specified as an extra but the #{extra} page is within the window" do
+    [ [ :first, "1" ], [ :last, "@page_count" ] ].each do |extra, number|
+      it "should call the block with #{extra.inspect} and a nil path if #{extra.inspect} is specified as an extra but the current page is the #{extra} page" do
         page = @pages.find(eval(number))
         page.paginator.set_path(&@path)
-        page.paginator.window(:size => @size, :extras => [ extra ]) do |page, path|
-          @received = true if extra == page
+        page.paginator.window(:size => @size, :extras => [ extra ]) do |*args|
+          @args << args
         end
-        @received.should be_nil
-      end
-    end
-    
-    [ [ :previous, 8, "8-2*@size-1" ], [ :next, 4, "4+2*@size+1" ] ].each do |extra, number, new_number|
-      it "should call the block with #{extra.inspect} and the path for the #{extra} page if #{extra.inspect} is specified as an extra" do
-        page = @pages.find(number)
-        page.paginator.set_path(&@path)
-        page.paginator.window(:size => @size, :extras => [ extra ]) do |page, path|
-          @received = true if extra == page && path == @path.call(@pages.find(eval(new_number)))
-        end
-        @received.should be_true
-      end
-    end
-
-    [ [ :previous, "1+2*@size" ], [ :next, "@page_count-2*@size" ] ].each do |extra, number|
-      it "should not call the block with #{extra.inspect} if #{extra.inspect} is specified as an extra but the #{extra} window is out of range" do
-        page = @pages.find(eval(number))
-        page.paginator.set_path(&@path)
-        page.paginator.window(:size => @size, :extras => [ extra ]) do |page, path|
-          @received = true if extra == page
-        end
-        @received.should be_nil
+        @args.should include([ extra, nil ])
       end
     end
     
@@ -151,4 +154,5 @@ describe "Paginator" do
       pages_in_order.should == [ :first, :previous, @pages.find(5), @pages.find(6), @pages.find(7), :next, :last ]
     end
   end
+
 end
