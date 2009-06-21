@@ -33,7 +33,6 @@ end
 class ::User < ActiveRecord::Base
   has_many :articles
   has_many :recent_articles, :order => "published_at DESC", :conditions => [ "published_at IS NOT :nil", { :nil => nil } ], :class_name => "Article"
-  has_many :published_articles, :conditions => [ "published_at IS NOT :nil", { :nil => nil } ], :class_name => "Article"
   has_many :contributions
   has_many :shared_articles, :through => :contributions, :source => :article
 end
@@ -124,7 +123,6 @@ module Contexts
     [
       [ "a scoped ActiveRecord class",        "Article.scoped({})"           ],
       [ "a has_many association",             "User.last.articles"           ],
-      [ "a conditioned has_many association", "User.last.published_articles" ],
       [ "an ordered has_many association",    "User.last.recent_articles"    ],
       [ "a has_many, :through association",   "User.last.shared_articles"    ] # not tested for habtm!
     ].each do |base_type, base|
@@ -160,4 +158,3 @@ Spec::Runner.configure do |config|
   config.include RoutingHelpers
   config.include ControllerHelpers
 end
-

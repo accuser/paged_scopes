@@ -1,52 +1,40 @@
 module PagedScopes
   module Index
     def index_of(object)
-      find_scope = scope(:find) || {}
-      primary_key_attribute = "#{table_name}.#{primary_key}"
-      
-      order_attributes = find_scope[:order].to_s.split(',').map(&:strip)
-      order_operators = order_attributes.inject({}) do |hash, order_attribute|
-        operator = order_attribute.slice!(/\s+(desc|DESC)$/) ? ">" : "<"
-        order_attribute.slice!(/\s+(asc|ASC)$/)
-        hash.merge(order_attribute => operator)
-      end
-      unless order_attributes.include? primary_key_attribute
-        order_operators[primary_key_attribute] = "<"
-        order_attributes << primary_key_attribute
+      columns = scope(:find, :order).to_s.split(',').map(&:strip) << "#{table_name}.#{primary_key}"
+      operators = columns.map do |column|
+        column.slice!(/\s+(asc|ASC)$/)
+        column.slice!(/\s+(desc|DESC)$/) ? ">" : "<"
       end
       
-      attribute_selects = returning([ "#{table_name}.*" ]) do |selects|
-        order_attributes.each_with_index do |order_attribute, n|
-          selects << "#{order_attribute} AS order_attribute_#{n}"
-        end
-      end.join(', ')
+      attributes = (1..columns.size).map { |n| "attribute_#{n}" }
       
-      order_attribute_options = { :select => attribute_selects }
-      order_attribute_options.merge!(:offset => 0) if find_scope[:offset]
-      object_with_order_attributes = find(object.id, order_attribute_options)
+      selects = [ columns, attributes ].transpose.map do |column, attribute|
+        "#{column} AS #{attribute}"
+      end.unshift("#{table_name}.*").join(', ')
+      
+      options = { :select => selects }
+      options.merge!(:offset => 0) if scope(:find, :limit) && scope(:find, :offset)
+      object_with_attributes = find(object.id, options)
 
-      object_order_attributes = {}
-      order_attributes.each_with_index do |order_attribute, n|
-        object_order_attributes[order_attribute] = object_with_order_attributes.send("order_attribute_#{n}")
-      end
-
-      order_conditions = order_attributes.reverse.inject([ "", {}, 0 ]) do |args, order_attribute|
-        string, hash, n = args
-        symbol = "s#{n}".to_sym
+      values = attributes.map { |attribute| object_with_attributes.send(attribute) }
+      
+      string, hash = "", {}
+      [ columns, operators, attributes, values ].transpose.reverse.each do |column, operator, attribute, value|
         string = string.blank? ?
-          "#{order_attribute} #{order_operators[order_attribute]} #{symbol.inspect}" :
-          "#{order_attribute} #{order_operators[order_attribute]} #{symbol.inspect} OR (#{order_attribute} = #{symbol.inspect} AND (#{string}))"
-        hash.merge!(symbol => object_order_attributes[order_attribute])
-        [ string, hash, n + 1 ]
+          "#{column} #{operator} :#{attribute}" :
+          "#{column} #{operator} :#{attribute} OR (#{column} = :#{attribute} AND (#{string}))"
+        hash.merge!(attribute.to_sym => value)
+        puts [ string, hash ].inspect
       end
-      order_conditions.pop
       
-      count_options = { :conditions => order_conditions, :distinct => true }
-      count_options.merge!(:offset => 0) if find_scope[:offset]
-      before_count = count(primary_key_attribute, count_options)
-      if find_scope[:limit]
-        before_count -= find_scope[:offset] if find_scope[:offset]
-        raise ActiveRecord::RecordNotFound, "Couldn't find #{name} with ID=#{object.id}" if before_count < 0 || before_count >= find_scope[:limit]
+      options = { :conditions => [ string, hash ], :distinct => true }
+      options.merge!(:offset => 0) if scope(:find, :limit) && scope(:find, :offset)
+      before_count = count("#{table_name}.#{primary_key}", options)
+      
+      if scope(:find, :limit)
+        before_count -= scope(:find, :offset) if scope(:find, :limit) && scope(:find, :offset)
+        raise ActiveRecord::RecordNotFound, "Couldn't find #{name} with ID=#{object.id}" if before_count < 0 || before_count >= scope(:find, :limit)
       end
       
       before_count
