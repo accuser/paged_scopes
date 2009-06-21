@@ -25,7 +25,6 @@ module PagedScopes
           "#{column} #{operator} :#{attribute}" :
           "#{column} #{operator} :#{attribute} OR (#{column} = :#{attribute} AND (#{string}))"
         hash.merge!(attribute.to_sym => value)
-        puts [ string, hash ].inspect
       end
       
       options = { :conditions => [ string, hash ], :distinct => true }
