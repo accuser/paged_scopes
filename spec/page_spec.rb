@@ -44,7 +44,7 @@ describe "Pages" do
     end
     
     it "should find pages with valid numbers" do
-      (1..@pages.count).each do |number|
+      1.upto(@pages.count) do |number|
         lambda { @pages.find(number) }.should_not raise_error
       end
     end
@@ -106,6 +106,14 @@ describe "Pages" do
         @pages.find_by_article(article).should be_nil
         lambda { @pages.find_by_article!(article) }.should raise_error(PagedScopes::PageNotFound)
       end
+    end
+    
+    it "should not find the page of an object if the object is a new record" do
+      lambda { @pages.find_by_article!(Article.new) }.should raise_error(PagedScopes::PageNotFound)
+    end
+    
+    it "should not find the page of an object if the object is not an ActiveRecord::Base instance" do
+      lambda { @pages.find_by_article!(Object.new) }.should raise_error(PagedScopes::PageNotFound)
     end
         
     it "should find a page from a params hash with a pages name as an id in the key" do

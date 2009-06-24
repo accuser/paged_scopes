@@ -76,7 +76,7 @@ module PagedScopes
       end
 
       def each(&block)
-        (1..count).each { |number| yield find(number) }
+        1.upto(count) { |number| yield find(number) }
       end
 
       def all
