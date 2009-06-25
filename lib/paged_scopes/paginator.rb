@@ -21,19 +21,36 @@ module PagedScopes
     def next
       path.call(@page.next) unless @page.last?
     end
+    
+    def first
+      path.call(@page.class.first)
+    end
+    
+    def last
+      path.call(@page.class.last)
+    end
 
     def window(options)
-      # return if one page...?
       raise ArgumentError, "No window block supplied." unless block_given?
       raise ArgumentError, "please specify a :inner option" unless inner = options[:inner]
+      return if @page.page_count < 2
       outer = options[:outer] || 0
       extras = [ options[:extras] ].flatten.compact
-      numbers = (@page.number-inner..@page.number+inner).to_a
+      numbers = case
+      when @page.number <= inner + 1
+        1 .. 1 + 2 * inner
+      when @page.number >= @page.page_count - inner
+        @page.page_count - 2 * inner .. @page.page_count
+      else
+        @page.number - inner .. @page.number + inner
+      end.to_a
       1.upto(outer) { |n| numbers << n << @page.page_count-n+1 }
-      numbers = numbers.uniq.sort.select { |n| n.between?(1, @page.page_count) }
+      numbers.uniq!
+      numbers.sort!
+      numbers.reject! { |number| !number.between?(1, @page.page_count) }
       returning [] do |results|
-        results << yield(:first, @page.first? ? nil : @path.call(@page.class.first), {}) if extras.include?(:first)
-        results << yield(:previous, @page.first? ? nil : @path.call(@page.previous), {}) if extras.include?(:previous)
+        results << yield(:first, @page.first? ? nil : first, {}) if extras.include?(:first)
+        results << yield(:previous, previous, {}) if extras.include?(:previous)
         numbers.zip([nil]+numbers, numbers[1..-1]) do |number, prev_number, next_number|
           page = @page.class.find(number)
           path = page == @page ? nil : @path.call(page)
@@ -43,8 +60,8 @@ module PagedScopes
           opts[:gap_after] = next_number ? next_number > number + 1 : false
           results << yield(page, path, opts)
         end        
-        results << yield(:next, @page.last? ? nil : @path.call(@page.next), {}) if extras.include?(:next)
-        results << yield(:last, @page.last? ? nil : @path.call(@page.class.last), {}) if extras.include?(:last)
+        results << yield(:next, self.next, {}) if extras.include?(:next)
+        results << yield(:last, @page.last? ? nil : last, {}) if extras.include?(:last)
       end.join("\n")
     end
   end

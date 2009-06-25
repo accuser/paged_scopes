@@ -3,15 +3,31 @@ require 'spec_helper'
 describe "Paginator" do
   before(:each) do
     @articles = Article.scoped({})
-    @articles.per_page = 3
+    @articles.per_page = 2
     @pages = @articles.pages
-    @page_count = @pages.count
-    (@page_count >= 14).should be_true # window specs won't work otherwise
     @path = lambda { |page| "/path/to/page/#{page.to_param}" }
   end
   
   it "should raise an error if the paginator path is not set" do
     lambda { @pages.first.paginator.next }.should raise_error(RuntimeError)
+  end
+    
+  it "should call the path proc with the last page when #last is called" do
+    @pages.each do |page|
+      path = lambda { |page| }
+      page.paginator.set_path(&path)
+      path.should_receive(:call).with(@pages.last).and_return("/path")
+      page.paginator.last.should == "/path"
+    end
+  end
+  
+  it "should call the path proc with the first page when #first is called" do
+    @pages.each do |page|
+      path = lambda { |page| }
+      page.paginator.set_path(&path)
+      path.should_receive(:call).with(@pages.first).and_return "/path"
+      page.paginator.first.should == "/path"
+    end
   end
   
   context "for the first page" do
@@ -22,8 +38,8 @@ describe "Paginator" do
     end
 
     it "should call the path proc with the next page when #next is called" do
-      @path.should_receive(:call).with(@page.next)
-      @paginator.next
+      @path.should_receive(:call).with(@page.next).and_return("/path")
+      @paginator.next.should == "/path"
     end
     
     it "should not call the path proc when #previous is called" do
@@ -34,19 +50,19 @@ describe "Paginator" do
 
   context "for the last page" do
     before(:each) do
-      @page = @pages.first
+      @page = @pages.last
       @paginator = @page.paginator
       @paginator.set_path(&@path)
     end
 
-    it "should call the path proc with the next page when #next is called" do
-      @path.should_receive(:call).with(@page.next)
-      @paginator.next
+    it "should call the path proc with the previous page when #previous is called" do
+      @path.should_receive(:call).with(@page.previous).and_return("/path")
+      @paginator.previous.should == "/path"
     end
     
-    it "should not call the path proc when #previous is called" do
+    it "should not call the path proc when #next is called" do
       @path.should_not_receive(:call)
-      @paginator.previous.should be_nil
+      @paginator.next.should be_nil
     end
   end
 
@@ -58,17 +74,22 @@ describe "Paginator" do
     end
 
     it "should call the path proc with the next page when #next is called" do
-      @path.should_receive(:call).with(@page.next)
-      @paginator.next
+      @path.should_receive(:call).with(@page.next).and_return("/path")
+      @paginator.next.should == "/path"
     end
     
     it "should call the path proc with the previous page when #previous is called" do
-      @path.should_receive(:call).with(@page.previous)
-      @paginator.previous
+      @path.should_receive(:call).with(@page.previous).and_return("/path")
+      @paginator.previous.should == "/path"
     end
   end
   
   describe "window generator" do
+    before(:each) do
+      @pages.stub!(:count).and_return(14)
+      @count = @pages.count
+    end
+    
     it "should raise an error if no block is provided" do
       lambda { @pages.first.paginator.window(:inner => 2) }.should raise_error(ArgumentError)
     end
@@ -83,14 +104,14 @@ describe "Paginator" do
       links = (4..8).map { |n| "<li><a href='/path/to/page/#{6+n}'>#{6+n}</a></li>" }
       links.join("\n").should == page.paginator.window(:inner => 2) { |page, path| links.shift }
     end
-    
+
     it "should call the block with the page and the path for each page in a window surrounding the page" do
       [
-        [ 6,             4..8                       ],
-        [ 2,             1..4                       ],
-        [ 1,             1..3                       ],
-        [ @page_count-1, @page_count-3..@page_count ],
-        [ @page_count,   @page_count-2..@page_count ]
+        [ 6,        4..8             ],
+        [ 3,        1..5             ],
+        [ 1,        1..5             ],
+        [ @count-2, @count-4..@count ],
+        [ @count,   @count-4..@count ]
       ].each do |number, range|
         page = @pages.find(number)
         page.paginator.set_path(&@path)
@@ -111,13 +132,13 @@ describe "Paginator" do
     context "with an outer window" do
       it "should also call the block for each page in a window from the first and last pages, and include separators between the windws if necessary" do
         [
-          [ 6,             1..2, 6-2..6+2,   @page_count-1..@page_count ],
-          [ 5,                     1..5+2,   @page_count-1..@page_count ],
-          [ 2,                     1..2+2,   @page_count-1..@page_count ],
-          [ 1,                     1..1+2,   @page_count-1..@page_count ],
-          [ @page_count-4, 1..2,           @page_count-4-2..@page_count ],
-          [ @page_count-1, 1..2,           @page_count-1-2..@page_count ],
-          [ @page_count,   1..2,             @page_count-2..@page_count ]
+          [ 6,        1..2, 6-2..6+2,   @count-1..@count ],
+          [ 5,                1..5+2,   @count-1..@count ],
+          [ 3,                  1..5,   @count-1..@count ],
+          [ 1,                  1..5,   @count-1..@count ],
+          [ @count-4, 1..2,           @count-4-2..@count ],
+          [ @count-2, 1..2,             @count-4..@count ],
+          [ @count,   1..2,             @count-4..@count ]
         ].each do |number, *ranges|
           page = @pages.find(number)
           page.paginator.set_path(&@path)
@@ -152,7 +173,7 @@ describe "Paginator" do
       end
     end
 
-    [ [ :previous, "1" ], [ :next, "@page_count" ] ].each do |extra, number|
+    [ [ :previous, "1" ], [ :next, "@count" ] ].each do |extra, number|
       it "should call the block with #{extra.inspect} and a nil path if #{extra.inspect} is specified as an extra but there is no #{extra} page" do
         page = @pages.find(eval(number))
         page.paginator.set_path(&@path)
@@ -176,7 +197,7 @@ describe "Paginator" do
       end
     end
 
-    [ [ :first, "1" ], [ :last, "@page_count" ] ].each do |extra, number|
+    [ [ :first, "1" ], [ :last, "@count" ] ].each do |extra, number|
       it "should call the block with #{extra.inspect} and a nil path if #{extra.inspect} is specified as an extra but the current page is the #{extra} page" do
         page = @pages.find(eval(number))
         page.paginator.set_path(&@path)
@@ -199,4 +220,39 @@ describe "Paginator" do
     end
   end
 
+  describe "window generator for a collection with fewer pages than the window size" do
+    it "should list all the page" do
+      @pages.stub!(:count).and_return(5)
+      @pages.each do |page|
+        page.paginator.set_path(&@path)
+        pages = @pages.all
+        page.paginator.window(:inner => 2) do |pg, path, options|
+          pg.should == pages.shift
+          if pg == page
+            path.should be_nil
+            options[:selected].should be_true
+          else
+            path.should_not be_nil
+            options[:selected].should be_false
+          end
+          options[:gap_before].should be_false
+          options[:gap_after].should be_false
+        end
+        pages.should be_empty
+      end
+    end
+  end
+  
+  describe "window generator for a collection with only one page" do
+    it "should not generate any links" do
+      @pages.stub!(:count).and_return(1)
+      page = @pages.first
+      page.paginator.set_path(&@path)
+      @path.should_not_receive(:call)
+      page.paginator.window(:inner => 2) do |pg, path, options|
+        fail "expected block not to be called"
+        "<a>some link</a>"
+      end.should be_blank
+    end
+  end
 end
