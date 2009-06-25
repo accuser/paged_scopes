@@ -5,7 +5,6 @@ describe "Paginator" do
     @articles = Article.scoped({})
     @articles.per_page = 3
     @pages = @articles.pages
-    @size = 2 # window size
     @page_count = @pages.count
     (@page_count >= 14).should be_true # window specs won't work otherwise
     @path = lambda { |page| "/path/to/page/#{page.to_param}" }
@@ -75,28 +74,65 @@ describe "Paginator" do
     end
     
     it "should raise an error if no block is provided" do
-      lambda { @pages.first.paginator.window({}) }.should raise_error(ArgumentError)
+      lambda { @pages.first.paginator.window(:inner => 2) }.should raise_error(ArgumentError)
+    end
+
+    it "should raise an error if no inner size is provided" do
+      lambda { @pages.first.paginator.window({}) { |page, path| } }.should raise_error(ArgumentError)
     end
     
     it "should concatenate all the block return values into a string" do
       page = @pages.find(6)
       page.paginator.set_path { |page| }
-      links = (1..5).map { |n| "<li><a href='/path/to/page/#{n}'>1</a></li>" }
-      links.join("\n").should == page.paginator.window(:size => 2) { |page, path| links.shift }
+      links = (4..8).map { |n| "<li><a href='/path/to/page/#{6+n}'>#{6+n}</a></li>" }
+      links.join("\n").should == page.paginator.window(:inner => 2) { |page, path| links.shift }
     end
     
     it "should call the block with the page and the path for each page in a window surrounding the page" do
-      [ [ 6, 6-@size..6+@size ], [ 2, 1..2+@size ], [ 1, 1..1+@size ], [ @page_count-1, @page_count-1-@size..@page_count ], [ @page_count, @page_count-@size..@page_count ] ].each do |number, range|
+      [
+        [ 6,             4..8                       ],
+        [ 2,             1..4                       ],
+        [ 1,             1..3                       ],
+        [ @page_count-1, @page_count-3..@page_count ],
+        [ @page_count,   @page_count-2..@page_count ]
+      ].each do |number, range|
         page = @pages.find(number)
         page.paginator.set_path(&@path)
-        expected_args = []
-        range.map { |nearby_number| @pages.find(nearby_number) }.each do |nearby_page|
-          expected_args << [ nearby_page, @path.call(nearby_page) ]
+        expected_args = range.inject [] do |args, n|
+          args << [ @pages.find(n), n == page.number ? nil : @path.call(@pages.find(n)) ]
         end
-        page.paginator.window(:size => @size) do |*args|
+        page.paginator.window(:inner => 2) do |*args|
           expected_args.shift.should == args
         end
         expected_args.should be_empty
+      end
+    end
+    
+    context "with an outer window" do
+      it "should also call the block for each page in a window from the first and last pages, and include separators between the windws if necessary" do
+        [
+          [ 6,             1..2, 6-2..6+2,   @page_count-1..@page_count ],
+          [ 5,                     1..5+2,   @page_count-1..@page_count ],
+          [ 2,                     1..2+2,   @page_count-1..@page_count ],
+          [ 1,                     1..1+2,   @page_count-1..@page_count ],
+          [ @page_count-4, 1..2,           @page_count-4-2..@page_count ],
+          [ @page_count-1, 1..2,           @page_count-1-2..@page_count ],
+          [ @page_count,   1..2,             @page_count-2..@page_count ]
+        ].each do |number, *ranges|
+          page = @pages.find(number)
+          page.paginator.set_path(&@path)
+          expected_args = ranges.inject [] do |args, range|
+            range.each do |n|
+              args << [ @pages.find(n), n == page.number ? nil : @path.call(@pages.find(n)) ]
+            end
+            args << [ :separator, nil ]
+          end
+          expected_args.pop
+          page.paginator.window(:inner => 2, :outer => 2) do |*args|
+            expected_args.shift.should == args
+          end
+          expected_args.should be_empty
+        end
       end
     end
     
@@ -104,7 +140,7 @@ describe "Paginator" do
       it "should call the block with #{extra.inspect} and the path for the #{extra} page if #{extra.inspect} is specified as an extra" do
         page = @pages.find(number)
         page.paginator.set_path(&@path)
-        page.paginator.window(:size => @size, :extras => [ extra ]) do |*args|
+        page.paginator.window(:inner => 2, :extras => [ extra ]) do |*args|
           @args << args
         end
         @args.should include([ extra, @path.call(@pages.find(new_number)) ])
@@ -115,7 +151,7 @@ describe "Paginator" do
       it "should call the block with #{extra.inspect} and a nil path if #{extra.inspect} is specified as an extra but there is no #{extra} page" do
         page = @pages.find(eval(number))
         page.paginator.set_path(&@path)
-        page.paginator.window(:size => @size, :extras => [ extra ]) do |*args|
+        page.paginator.window(:inner => 2, :extras => [ extra ]) do |*args|
           @args << args
         end
         @args.should include([ extra, nil ])
@@ -126,7 +162,7 @@ describe "Paginator" do
       it "should call the block with #{extra.inspect} and the path for the #{extra} page if #{extra.inspect} is specified as an extra" do
         page = @pages.find(6)
         page.paginator.set_path(&@path)
-        page.paginator.window(:size => @size, :extras => [ extra ]) do |*args|
+        page.paginator.window(:inner => 2, :extras => [ extra ]) do |*args|
           @args << args
         end
         @args.should include([ extra, @path.call(@pages.send(extra)) ])
@@ -137,7 +173,7 @@ describe "Paginator" do
       it "should call the block with #{extra.inspect} and a nil path if #{extra.inspect} is specified as an extra but the current page is the #{extra} page" do
         page = @pages.find(eval(number))
         page.paginator.set_path(&@path)
-        page.paginator.window(:size => @size, :extras => [ extra ]) do |*args|
+        page.paginator.window(:inner => 2, :extras => [ extra ]) do |*args|
           @args << args
         end
         @args.should include([ extra, nil ])
@@ -148,7 +184,7 @@ describe "Paginator" do
       page = @pages.find(6)
       page.paginator.set_path(&@path)
       pages_in_order = []
-      page.paginator.window(:size => 1, :extras => [ :first, :previous, :next, :last ]) do |page, path|
+      page.paginator.window(:inner => 1, :extras => [ :first, :previous, :next, :last ]) do |page, path|
         pages_in_order << page
       end
       pages_in_order.should == [ :first, :previous, @pages.find(5), @pages.find(6), @pages.find(7), :next, :last ]
