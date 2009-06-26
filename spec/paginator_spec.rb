@@ -115,16 +115,15 @@ describe "Paginator" do
       ].each do |number, range|
         page = @pages.find(number)
         page.paginator.set_path(&@path)
-        pages, paths, selecteds = [], [], []
+        pages, paths = [], []
         range.each do |n|
           pages << @pages.find(n)
           paths << (n == page.number ? nil : @path.call(@pages.find(n)))
-          selecteds << (n == page.number)
         end
-        page.paginator.window(:inner => 2) do |page, path, opts|
-          page.should == pages.shift
+        page.paginator.window(:inner => 2) do |pg, path, classes|
+          pg.should == pages.shift
           path.should == paths.shift
-          opts[:selected].should == selecteds.shift
+          pg == page ? classes.should(include(:selected)) : classes.should_not(include(:selected))
         end
       end
     end
@@ -151,11 +150,11 @@ describe "Paginator" do
           end
           pages.each_with_index { |pg, n| gaps_before << (pages[n-1] ? pages[n-1].number < pg.number - 1 : false) }
           pages.each_with_index { |pg, n| gaps_after << (pages[n+1] ? pages[n+1].number > pg.number + 1 : false) }
-          page.paginator.window(:inner => 2, :outer => 2) do |page, path, opts|
-            page.should == pages.shift
+          page.paginator.window(:inner => 2, :outer => 2) do |pg, path, classes|
+            pg.should == pages.shift
             path.should == paths.shift
-            opts[:gap_before].should == gaps_before.shift
-            opts[:gap_after].should == gaps_after.shift
+            gaps_before.shift ? classes.should(include(:gap_before)) : classes.should_not(include(:gap_before))
+            gaps_after.shift ? classes.should(include(:gap_after)) : classes.should_not(include(:gap_after))
           end
         end
       end
@@ -166,7 +165,7 @@ describe "Paginator" do
         page = @pages.find(number)
         page.paginator.set_path(&@path)
         pages_paths = []
-        page.paginator.window(:inner => 2, :extras => [ extra ]) do |page, path, options|
+        page.paginator.window(:inner => 2, :extras => [ extra ]) do |page, path, classes|
           pages_paths << [ page, path ]
         end
         pages_paths.should include([ extra, @path.call(@pages.find(new_number)) ])
@@ -178,7 +177,7 @@ describe "Paginator" do
         page = @pages.find(eval(number))
         page.paginator.set_path(&@path)
         pages_paths = []
-        page.paginator.window(:inner => 2, :extras => [ extra ]) do |page, path, options|
+        page.paginator.window(:inner => 2, :extras => [ extra ]) do |page, path, classes|
           pages_paths << [ page, path ]
         end
         pages_paths.should include([ extra, nil ])
@@ -190,7 +189,7 @@ describe "Paginator" do
         page = @pages.find(6)
         page.paginator.set_path(&@path)
         pages_paths = []
-        page.paginator.window(:inner => 2, :extras => [ extra ]) do |page, path, options|
+        page.paginator.window(:inner => 2, :extras => [ extra ]) do |page, path, classes|
           pages_paths << [ page, path ]
         end
         pages_paths.should include([ extra, @path.call(@pages.send(extra)) ])
@@ -202,7 +201,7 @@ describe "Paginator" do
         page = @pages.find(eval(number))
         page.paginator.set_path(&@path)
         pages_paths = []
-        page.paginator.window(:inner => 2, :extras => [ extra ]) do |page, path, options|
+        page.paginator.window(:inner => 2, :extras => [ extra ]) do |page, path, classes|
           pages_paths << [ page, path ]
         end
         pages_paths.should include([ extra, nil ])
@@ -213,7 +212,7 @@ describe "Paginator" do
       page = @pages.find(6)
       page.paginator.set_path(&@path)
       pages = []
-      page.paginator.window(:inner => 1, :extras => [ :first, :previous, :next, :last ]) do |page, path, options|
+      page.paginator.window(:inner => 1, :extras => [ :first, :previous, :next, :last ]) do |page, path, classes|
         pages << page
       end
       pages.should == [ :first, :previous, @pages.find(5), @pages.find(6), @pages.find(7), :next, :last ]
@@ -226,17 +225,16 @@ describe "Paginator" do
       @pages.each do |page|
         page.paginator.set_path(&@path)
         pages = @pages.all
-        page.paginator.window(:inner => 2) do |pg, path, options|
+        page.paginator.window(:inner => 2) do |pg, path, classes|
           pg.should == pages.shift
           if pg == page
             path.should be_nil
-            options[:selected].should be_true
+            classes.should include(:selected)
           else
             path.should_not be_nil
-            options[:selected].should be_false
+            classes.should_not include(:selected)
           end
-          options[:gap_before].should be_false
-          options[:gap_after].should be_false
+          classes.should_not include(:gap_before, :gap_after)
         end
         pages.should be_empty
       end
@@ -249,7 +247,7 @@ describe "Paginator" do
       page = @pages.first
       page.paginator.set_path(&@path)
       @path.should_not_receive(:call)
-      page.paginator.window(:inner => 2) do |pg, path, options|
+      page.paginator.window(:inner => 2) do |pg, path, classes|
         fail "expected block not to be called"
         "<a>some link</a>"
       end.should be_blank

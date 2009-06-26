@@ -49,19 +49,19 @@ module PagedScopes
       numbers.sort!
       numbers.reject! { |number| !number.between?(1, @page.page_count) }
       returning [] do |results|
-        results << yield(:first, @page.first? ? nil : first, {}) if extras.include?(:first)
-        results << yield(:previous, previous, {}) if extras.include?(:previous)
+        results << yield(:first, @page.first? ? nil : first, []) if extras.include?(:first)
+        results << yield(:previous, previous, []) if extras.include?(:previous)
         numbers.zip([nil]+numbers, numbers[1..-1]) do |number, prev_number, next_number|
           page = @page.class.find(number)
           path = page == @page ? nil : @path.call(page)
-          opts = {}
-          opts[:selected] = page == @page
-          opts[:gap_before] = prev_number ? prev_number < number - 1 : false
-          opts[:gap_after] = next_number ? next_number > number + 1 : false
-          results << yield(page, path, opts)
+          classes = []
+          classes << :selected if page == @page
+          classes << :gap_before if prev_number && prev_number < number - 1
+          classes << :gap_after  if next_number && next_number > number + 1
+          results << yield(page, path, classes)
         end        
-        results << yield(:next, self.next, {}) if extras.include?(:next)
-        results << yield(:last, @page.last? ? nil : last, {}) if extras.include?(:last)
+        results << yield(:next, self.next, []) if extras.include?(:next)
+        results << yield(:last, @page.last? ? nil : last, []) if extras.include?(:last)
       end.join("\n")
     end
   end
