@@ -1,7 +1,0 @@
-= paged_scopes
-
-Description goes here.
-
-== Copyright
-
-Copyright (c) 2009 Matthew Hollingworth. See LICENSE for details.
