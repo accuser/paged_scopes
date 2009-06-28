@@ -362,20 +362,9 @@ li.page.gap_before:before { content: "..." }
 
 The result: a nice-looking set of page links.
 
+(Refer to "code.matthewhollingworth.net":http://code.matthewhollingworth.net/articles/11 for correctly rendered examples!)
+
 <notextile>
-<style>
-.pgex { text-align: center }
-.pgex li.page a, .pgex li.page a:visited, .pgex li.page a:hover, .pgex li.page a:active { border: none }
-.pgex li.page { display: inline }
-.pgex li.page a { text-decoration: none }
-.pgex li.page span {
-  border: 1px solid gray;
-  padding: 0.2em 0.5em }
-.pgex li.page.selected span, .pgex li.page span:hover {
-  background: gray;
-  color: white }
-.pgex li.page.gap_before:before { content: "..." }
-</style>
 <ul class="pgex">
   <li class="page gap_after" id="page_1">
     <span><a href="#">1</a></span>
