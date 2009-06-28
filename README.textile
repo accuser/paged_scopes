@@ -362,7 +362,7 @@ li.page.gap_before:before { content: "..." }
 
 The result: a nice-looking set of page links.
 
-(Refer to "code.matthewhollingworth.net":http://code.matthewhollingworth.net/articles/11 for correctly rendered examples!)
+[Refer to the original article at "code.matthewhollingworth.net":http://code.matthewhollingworth.net/articles/11 for correctly rendered examples!]
 
 <notextile>
 <ul class="pgex">
@@ -412,6 +412,8 @@ end
 </pre>
 
 Which renders as follows (for page 4 this time):
+
+[Refer to the original article at "code.matthewhollingworth.net":http://code.matthewhollingworth.net/articles/11 for correctly rendered examples!]
 
 <notextile>
 <ul class="pgex">
