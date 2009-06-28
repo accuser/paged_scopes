@@ -261,7 +261,7 @@ Loading the page for a member action (show, edit, update) might not seem useful 
 def update
   if @article.save
     flash[:notice] = "Success!"
-    redirect_to [ @page, @article ]
+    redirect_to page_articles_path(@page)
   else
     ...
   end
