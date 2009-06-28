@@ -142,7 +142,7 @@ module PagedScopes
     end
     
     def full?
-      !last? || page_scope.all.length == per_page
+      !last? || page_scope.all.length == per_page # TODO: could improve this to calculate mathematically
     end
     
     def to_param
