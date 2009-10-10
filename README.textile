@@ -456,14 +456,14 @@ h2. Get It!
 You can install the PagedScopes gem as follows:
 
 <pre>
-gem sources -a http://gems.github.com # just once
-sudo gem install mholling-paged_scopes
+gem sources -a http://gemcutter.org # just once
+sudo gem install paged_scopes
 </pre>
 
 And in your <code>config/environment.rb</code>, if you're on Rails:
 
 <pre>
-config.gem "mholling-paged_scopes", :lib => "paged_scopes", :source => "http://gems.github.com"
+config.gem "paged_scopes", :source => "http://gemcutter.org"
 </pre>
 
 Peruse the code at "GitHub":http://github.com/mholling/paged_scopes.
