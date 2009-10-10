@@ -18,6 +18,7 @@ EOF
     gem.add_dependency 'activerecord', ">= 2.2.1"
     gem.has_rdoc = false
   end
+  Jeweler::GemcutterTasks.new
 rescue LoadError
   puts "Jeweler not available. Install it with: sudo gem install technicalpickles-jeweler -s http://gems.github.com"
 end
