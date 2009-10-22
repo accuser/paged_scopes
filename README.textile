@@ -199,7 +199,7 @@ A more complex example:
 map.resources :articles, :collection => { :published => :get }, :paged => true
 </pre>
 
-Which would produce these routes:
+Which would produce these paged routes:
 
 <pre>
 published_page_articles GET /pages/:page_id/articles/published(.:format) {:controller=>"articles", :action=>"published"}
@@ -224,8 +224,28 @@ Another complex example:
 map.resources :articles, :collection => { :published => :get }, :paged => { :index => true, :published => { :as => :pagina } }
 </pre>
 
+Which would produce these paged routes:
+
+<pre>
 published_page_articles GET /pagina/:page_id/articles/published(.:format) {:controller=>"articles", :action=>"published"}
           page_articles GET /pages/:page_id/articles(.:format)            {:controller=>"articles", :action=>"index"}
+</pre>
+
+In fact, the <code>:as</code> and <code>:name</code> options specified in the root of the <code>:paged</code> will be used for all paged routes where an alternative is not specified.
+
+<pre>
+map.resources :users, :collection => { :active => :get, :blocked => :get, :online => :get }, :paged => { :as => "pagina", :index => true, :active => { :name => "group" }, :blocked => { :as => "blacklist" } }
+</pre>
+
+Which would produce these three paged routes:
+
+<pre>
+blocked_page_users GET /blacklist/:page_id/users/blocked(.:format) {:controller=>"users", :action=>"blocked"}
+active_group_users GET /pagina/:group_id/users/active(.:format)    {:controller=>"users", :action=>"active"}
+        page_users GET /pagina/:page_id/users(.:format)            {:controller=>"users", :action=>"index"}
+</pre>
+
+Notice that there is no paged route for the <code>:online</code> collection action.
 
 h2. Controller Methods
 
