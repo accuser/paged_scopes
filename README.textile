@@ -212,10 +212,10 @@ By default paged routes are generated for the <code>:index</code> action and any
 map.resources :articles, :collection => { :published => :get }, :paged => { :published => true }   
 </pre>
 
-Which would produce only this paged routes:
+Which would produce only this paged route:
 
 <pre>
-published_page_articles GET    /pages/:page_id/articles/published(.:format) {:controller=>"articles", :action=>"published"}
+published_page_articles GET /pages/:page_id/articles/published(.:format) {:controller=>"articles", :action=>"published"}
 </pre>
 
 Another complex example:
