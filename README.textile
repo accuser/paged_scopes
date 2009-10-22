@@ -193,6 +193,40 @@ page_articles GET /pagina/:page_id/articles(.:format) {:controller=>"articles", 
 
 (This is likely only to be useful in rare situations. One example would be paginating more than one collection in a single view.)
 
+A more complex example:
+
+<pre>
+map.resources :articles, :collection => { :published => :get }, :paged => true
+</pre>
+
+Which would produce these routes:
+
+<pre>
+published_page_articles GET /pages/:page_id/articles/published(.:format) {:controller=>"articles", :action=>"published"}
+          page_articles GET /pages/:page_id/articles(.:format)           {:controller=>"articles", :action=>"index"}
+</pre>
+
+By default paged routes are generated for the <code>:index</code> action and any <code>:collection</code> actions that specify the <code>:get</code> method. To override the default behaviour, simply be explicit about which paged routes are required:
+
+<pre>
+map.resources :articles, :collection => { :published => :get }, :paged => { :published => true }   
+</pre>
+
+Which would produce only this paged routes:
+
+<pre>
+published_page_articles GET    /pages/:page_id/articles/published(.:format) {:controller=>"articles", :action=>"published"}
+</pre>
+
+Another complex example:
+
+<pre>
+map.resources :articles, :collection => { :published => :get }, :paged => { :index => true, :published => { :as => :pagina } }
+</pre>
+
+published_page_articles GET /pagina/:page_id/articles/published(.:format) {:controller=>"articles", :action=>"published"}
+          page_articles GET /pages/:page_id/articles(.:format)            {:controller=>"articles", :action=>"index"}
+
 h2. Controller Methods
 
 OK, so we have our pages represented in our article index route. Let's turn to the articles controller next.
