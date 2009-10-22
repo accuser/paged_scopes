@@ -51,7 +51,7 @@ describe "Resources" do
       recognise_path(:get, "/groups/1/articles").should == { :controller => "articles", :action => "index", :group_id => "1" }
     end
     
-    it "should accept a :path_prefix hash as the :paged option" do
+    it "should accept a :name_prefix option in the paged route" do
       draw_routes { |map| map.resources :articles, :paged => true, :name_prefix => "baz_" }
       named_routes.names.should include(:baz_page_articles)
     end
@@ -66,6 +66,84 @@ describe "Resources" do
         drawing_routes do |map|
           map.resources :articles, :paged => true, :has_many => :comments
         end.should change { number_of_routes }.by(7+1+7)
+      end
+    end
+  end
+  
+  context "with extra collection routes" do
+    context "and an overall :paged option" do
+      it "should map a paged route if the collection action is GET" do
+        drawing_routes { |map| map.resources :memberships, :collection => { :paid => :get }, :paged => true }.should change { number_of_routes }.by(8+2)
+      end
+    
+      it "should map a paged route if the collection action includes GET" do
+        drawing_routes { |map| map.resources :memberships, :collection => { :paid => [ :get, :put ] }, :paged => true }.should change { number_of_routes }.by(9+2)
+      end
+    
+      it "should not map a paged route if the collection action is not GET" do
+        drawing_routes { |map| map.resources :memberships, :collection => { :paid => :put }, :paged => true }.should change { number_of_routes }.by(8+1)
+      end
+    
+      it "should not map a paged route if the collection action does not include GET" do
+        drawing_routes { |map| map.resources :memberships, :collection => { :paid => [ :put, :delete ] }, :paged => true }.should change { number_of_routes }.by(9+1)
+      end
+    
+      it "should map a paged collection route for a GET method only" do
+        draw_routes { |map| map.resources :memberships, :collection => { :paid => :get }, :paged => true }
+        recognise_path(   :get, "/pages/1/memberships/paid").should == { :controller => "memberships", :action => "paid", :page_id => "1" }
+        recognise_path(   :put, "/pages/1/memberships/paid").should be_nil
+        recognise_path(  :post, "/pages/1/memberships/paid").should be_nil
+        recognise_path(:delete, "/pages/1/memberships/paid").should be_nil
+      end
+
+      it "should add a named route for the paged collection route" do
+        draw_routes { |map| map.resources :memberships, :collection => { :paid => :get }, :paged => true }
+        named_routes.names.should include(:paid_page_memberships)
+        # TODO: this should maybe be page_paid_memberships?
+      end
+
+      it "should observe the :path_prefix option in the paged route" do
+        draw_routes { |map| map.resources :memberships, :collection => { :paid => :get }, :paged => true, :path_prefix => "foo" }
+        recognise_path(:get, "/foo/pages/1/memberships/paid").should == { :controller => "memberships", :action => "paid", :page_id => "1" }
+      end
+
+      it "should observe a :namespace option in the paged route" do
+        draw_routes { |map| map.resources :memberships, :collection => { :paid => :get }, :paged => true, :namespace => "bar/" }
+        recognise_path(:get, "/pages/1/memberships/paid").should == { :controller => "bar/memberships", :action => "paid", :page_id => "1" }
+      end
+
+      it "should accept an :as option in the :paged option" do
+        draw_routes { |map| map.resources :memberships, :collection => { :paid => :get }, :paged => { :as => "page" } }
+        recognise_path(:get, "/page/1/memberships/paid").should == { :controller => "memberships", :action => "paid", :page_id => "1" }
+      end
+
+      it "should accept a :name option in the :paged option" do
+        draw_routes { |map| map.resources :memberships, :collection => { :paid => :get }, :paged => { :name => :groups } }
+        recognise_path(:get, "/groups/1/memberships/paid").should == { :controller => "memberships", :action => "paid", :group_id => "1" }
+      end
+
+      it "should accept a :name_prefix option in the paged route" do
+        draw_routes { |map| map.resources :memberships, :collection => { :paid => :get }, :paged => true, :name_prefix => "baz_" }
+        named_routes.names.should include(:paid_baz_page_memberships)
+        # TODO: this should maybe be baz_page_paid_memberships?
+      end
+    end
+    
+    context "and a per-collection :paged options hash" do
+      it "should add a paged route for each :get collection with a corresponding entry in the :paged hash" do
+        drawing_routes { |map| map.resources :memberships, :collection => { :paid => :get, :unpaid => :get }, :paged => { :index => true, :paid => true } }.should change { number_of_routes }.by(9+2)
+      end
+
+      it "should accept an :as option in the :paged options hash" do
+        draw_routes { |map| map.resources :memberships, :collection => { :paid => :get }, :paged => { :index => true, :paid => { :as => "page" } } }
+        recognise_path(:get, "/pages/1/memberships").should == { :controller => "memberships", :action => "index", :page_id => "1" }
+        recognise_path(:get, "/page/1/memberships/paid").should == { :controller => "memberships", :action => "paid", :page_id => "1" }
+      end
+
+      it "should accept a :name option in the :paged options hash" do
+        draw_routes { |map| map.resources :memberships, :collection => { :paid => :get }, :paged => { :index => true, :paid => { :name => :groups } } }
+        recognise_path(:get, "/pages/1/memberships").should == { :controller => "memberships", :action => "index", :page_id => "1" }
+        recognise_path(:get, "/groups/1/memberships/paid").should == { :controller => "memberships", :action => "paid", :group_id => "1" }
       end
     end
   end

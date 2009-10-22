@@ -16,7 +16,7 @@ module PagedScopes
             paged_options.merge! :index => true
           end
           
-          options[:collection].each_pair { |k,v| paged_options[k] = true if v == :get } if options[:collection].is_a? Hash
+          options[:collection].each_pair { |k,v| paged_options[k] = true if [ v ].flatten.include? :get } if options[:collection].is_a? Hash
         end
 
         paged_options.each_pair do |action,page_options|
@@ -31,6 +31,7 @@ module PagedScopes
           
           with_options(options.slice(*preserved_options)) do |map|
             map.resources_without_paged(page_options.delete(:name) || :pages, page_options) do |page|
+              # page.resources(*(entities.dup << { :only => [], :as => options[:as], :collection => { action => :get }}))
               if action == :index
                 page.resources(*(entities.dup << { :only => :index, :as => options[:as] }))
               else
