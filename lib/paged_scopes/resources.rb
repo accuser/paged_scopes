@@ -16,27 +16,24 @@ module PagedScopes
             paged_options.merge! :index => true
           end
           
-          options[:collection].each_pair { |k,v| paged_options[k] = true if [ v ].flatten.include? :get } if options[:collection].is_a? Hash
+          options[:collection].each { |collection, methods| paged_options[collection] = true if [ methods ].flatten.include? :get } if options[:collection]
         end
 
-        paged_options.each_pair do |action,page_options|
+        paged_options.each_pair do |action, page_options|
           page_options = {} unless page_options.is_a? Hash
           
           page_options.reverse_merge! :name => paged_name unless paged_name.blank?
           page_options.reverse_merge! :as => paged_as unless paged_as.blank?
-
-          page_options[:only] = []
+          page_options.merge! :only => :none
           
           preserved_options = ActionController::Resources::INHERITABLE_OPTIONS + [ :name_prefix, :path_prefix ]
           
           with_options(options.slice(*preserved_options)) do |map|
             map.resources_without_paged(page_options.delete(:name) || :pages, page_options) do |page|
-              # page.resources(*(entities.dup << { :only => [], :as => options[:as], :collection => { action => :get }}))
-              if action == :index
-                page.resources(*(entities.dup << { :only => :index, :as => options[:as] }))
-              else
-                page.resources(*(entities.dup << { :only => [], :as => options[:as], :collection => { action => :get }}))
-              end
+              entities_options = action == :index ?
+                { :only => :index, :as => options[:as] } :
+                { :only => :none,  :as => options[:as], :collection => { action => :get } }
+              page.resources(*(entities.dup << entities_options))
             end
           end
         end

@@ -71,6 +71,7 @@ describe "Resources" do
   end
   
   context "with extra collection routes" do
+    # TODO: test for :index in :except...?
     context "and an overall :paged option" do
       it "should map a paged route if the collection action is GET" do
         drawing_routes { |map| map.resources :memberships, :collection => { :paid => :get }, :paged => true }.should change { number_of_routes }.by(8+2)
