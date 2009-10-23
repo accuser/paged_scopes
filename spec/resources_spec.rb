@@ -17,6 +17,16 @@ describe "Resources" do
     drawing_routes { |map| map.resources :articles, :paged => true }.should change { number_of_routes }.by(7+1)
   end
   
+  it "should not add a paged index route if the index action is excluded by an :only option" do
+    drawing_routes { |map| map.resources :articles, :paged => true, :only => :show }.should change { number_of_routes }.by(1+0)
+    drawing_routes { |map| map.resources :memberships, :paged => true, :only => [ :show, :edit ] }.should change { number_of_routes }.by(2+0)
+  end
+  
+  it "should not add a paged index route if the index action is excluded by an :except option" do
+    drawing_routes { |map| map.resources :articles, :paged => true, :except => :index }.should change { number_of_routes }.by(6+0)
+    drawing_routes { |map| map.resources :memberships, :paged => true, :except => [ :index, :new ] }.should change { number_of_routes }.by(5+0)
+  end
+  
   context "with a :paged options" do    
     it "should map a paged index route for GET only" do
       draw_routes { |map| map.resources :articles, :paged => true }
