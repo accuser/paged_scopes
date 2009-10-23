@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = %q{paged_scopes}
-  s.version = "0.1.0"
+  s.version = "0.1.1"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Matthew Hollingworth"]
-  s.date = %q{2009-10-10}
+  s.date = %q{2009-10-23}
   s.email = %q{mdholling@gmail.com}
   s.extra_rdoc_files = [
     "LICENSE",
@@ -22,6 +22,7 @@ Gem::Specification.new do |s|
      "README.textile",
      "Rakefile",
      "VERSION.yml",
+     "history.txt",
      "lib/paged_scopes.rb",
      "lib/paged_scopes/collection.rb",
      "lib/paged_scopes/context.rb",
