@@ -2,10 +2,12 @@ module PagedScopes
   module Collection
     module Attributes
       attr_writer :per_page
-    
+      
+      COLLECTION = (Rails.version.to_i == 2 ? ActiveRecord::NamedScope::Scope : ActiveRecord::Relation)
+      
       def per_page
         @per_page || case self
-        when ActiveRecord::NamedScope::Scope
+        when COLLECTION
           @proxy_scope.per_page
         when ActiveRecord::Associations::AssociationCollection
           @reflection.klass.per_page
@@ -16,7 +18,7 @@ module PagedScopes
     
       def page_name
         @page_name || case self
-        when ActiveRecord::NamedScope::Scope
+        when COLLECTION
           @proxy_scope.page_name
         when ActiveRecord::Associations::AssociationCollection
           @reflection.klass.page_name
@@ -42,4 +44,4 @@ end
 
 ActiveRecord::Base.extend PagedScopes::Collection::Attributes
 ActiveRecord::Associations::AssociationCollection.send :include, PagedScopes::Collection
-ActiveRecord::NamedScope::Scope.send :include, PagedScopes::Collection
+PagedScopes::Collection::COLLECTION.send :include, PagedScopes::Collection

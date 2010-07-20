@@ -28,7 +28,12 @@ module PagedScopes
     
     def self.included(base)
       base.extend ClassMethods
-      base.rescue_responses.update('PagedScopes::PageNotFound' => :not_found)
+      
+      if Rails.version.to_i == 2
+        base.rescue_responses.update('PagedScopes::PageNotFound' => :not_found)
+      else
+        base.rescue_from PagedScopes::PageNotFound, :with => :not_found
+      end
     end
     
     private
